@@ -1,0 +1,7 @@
+{
+  "crons": [
+    { "path": "/api/cron/activate-versions", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/reconcile-shopify", "schedule": "5 6 * * *" },
+    { "path": "/api/cron/export-weekly", "schedule": "0 7 * * 0" }
+  ]
+}

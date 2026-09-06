@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+/* Design tokens — mesmo padrão do 007/Sidney/associadas: fundo quase preto, dourado
+   champanhe da Élyx (#d6b370) como acento. */
+@theme {
+  --color-bg: #0a0a0c;
+  --color-surface: #121215;
+  --color-surface-2: #18181c;
+  --color-surface-3: #1f1f24;
+  --color-line: #232329;
+  --color-line-2: #2e2e36;
+  --color-fg: #ededf0;
+  --color-fg-2: #b4b4bd;
+  --color-muted: #7f7f8a;
+  --color-muted-2: #55555f;
+  --color-accent: #d6b370;
+  --color-accent-2: #e8cd8e;
+  --color-accent-deep: #8b6f36;
+  --color-ok: #34d399;
+  --color-warn: #fbbf24;
+  --color-danger: #f87171;
+  --color-info: #60a5fa;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.03) inset, 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --shadow-glow: 0 0 0 1px rgb(214 179 112 / 0.35), 0 8px 30px -10px rgb(214 179 112 / 0.35);
+}
+
+html { color-scheme: dark; }
+body { background: var(--color-bg); color: var(--color-fg); }
+
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--color-line-2); border-radius: 999px; border: 2px solid var(--color-bg); }
+*::-webkit-scrollbar-track { background: transparent; }
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-line bg-surface;
+    box-shadow: var(--shadow-card);
+  }
+  .card-hover { @apply transition-all duration-200; }
+  .card-hover:hover { @apply -translate-y-0.5 border-line-2; box-shadow: var(--shadow-card), 0 16px 40px -20px rgb(0 0 0 / 0.8); }
+
+  .btn {
+    @apply inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg px-3.5 text-sm font-medium whitespace-nowrap transition-all duration-150 select-none;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60;
+  }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn-sm { @apply h-8 px-3 text-xs; }
+  .btn-xs { @apply h-7 px-2.5 text-xs; }
+  .btn-primary { @apply bg-accent text-black hover:bg-accent-2; box-shadow: 0 6px 18px -8px rgb(214 179 112 / 0.7); }
+  .btn-secondary { @apply border border-line-2 bg-surface-2 text-fg hover:border-accent/50 hover:bg-surface-3; }
+  .btn-ghost { @apply text-fg-2 hover:bg-surface-2 hover:text-fg; }
+  .btn-danger { @apply border border-danger/30 bg-danger/10 text-danger hover:bg-danger/20; }
+
+  .chip {
+    @apply inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-line px-3 text-xs font-medium text-fg-2 transition-colors;
+    @apply hover:border-line-2 hover:bg-surface-2 hover:text-fg;
+  }
+  .chip-active { @apply border-accent/60 bg-accent/15 text-accent-2 hover:border-accent hover:bg-accent/20 hover:text-accent-2; }
+
+  .badge { @apply inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-wide; }
+  .badge-ok { @apply bg-ok/15 text-ok; }
+  .badge-warn { @apply bg-warn/15 text-warn; }
+  .badge-danger { @apply bg-danger/15 text-danger; }
+  .badge-info { @apply bg-info/15 text-info; }
+  .badge-accent { @apply bg-accent/15 text-accent-2; }
+  .badge-muted { @apply bg-surface-3 text-fg-2; }
+
+  .input {
+    @apply h-9 w-full rounded-lg border border-line-2 bg-surface-2 px-3 text-sm text-fg placeholder:text-muted-2 transition-colors;
+    @apply focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/25;
+  }
+  .select {
+    @apply h-9 w-full cursor-pointer appearance-none rounded-lg border border-line-2 bg-surface-2 px-3 pr-8 text-sm text-fg transition-colors;
+    @apply focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/25;
+  }
+  .label { @apply text-xs font-medium text-muted; }
+
+  .nav-item { @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-fg-2 transition-colors hover:bg-surface-2 hover:text-fg; }
+  .nav-item-active { @apply bg-accent/12 text-accent-2 hover:bg-accent/15 hover:text-accent-2; }
+
+  .kicker { @apply text-[11px] font-semibold tracking-[0.14em] text-muted uppercase; }
+  .h1 { @apply text-2xl font-semibold tracking-tight text-fg; }
+  .lede { @apply max-w-3xl text-sm leading-relaxed text-muted; }
+}
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.fade-up { animation: fade-up 0.35s ease-out both; }

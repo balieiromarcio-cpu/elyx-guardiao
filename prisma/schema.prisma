@@ -1,0 +1,301 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  TEAM
+}
+
+enum ProductStatus {
+  RASCUNHO
+  ATIVO
+  DESCONTINUADO
+}
+
+/// Ciclo de vida de uma versão de ficha: rascunho (ninguém vê) -> proposta (aguarda
+/// aprovação de Marcio/Enzo) -> vigente (é o que a API serve) -> encerrada (substituída,
+/// fica pra histórico/auditoria — nunca é apagada).
+enum VersionStatus {
+  RASCUNHO
+  PROPOSTA
+  VIGENTE
+  ENCERRADA
+}
+
+enum ClaimScope {
+  GLOBAL
+  PRODUCT
+}
+
+enum ClaimType {
+  ALLOWED
+  FORBIDDEN
+}
+
+enum ChangeOrigin {
+  MANUAL
+  SHOPIFY
+  IMPORT
+  SYSTEM
+}
+
+enum ReviewStatus {
+  PENDENTE
+  CONCLUIDA
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  password  String
+  name      String
+  role      Role
+  createdAt DateTime  @default(now())
+  removedAt DateTime?
+}
+
+/// Limite de força-bruta no login (mesmo padrão do 007/associadas).
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+}
+
+/// Linha única (id "default") — verdade da marca: propósito, persona, tom, vocabulário,
+/// regulatório. Nenhum outro sistema edita isto; todos leem via /v1/brand(/context).
+model Brand {
+  id           String   @id @default("default")
+  purpose      String? // propósito e posicionamento
+  persona      String? // pra quem a marca fala (mulher 40+…) e a promessa
+  voiceRules   String? // tom de voz, com exemplos certo/errado
+  monicaRules  String? // como usar o nome e a imagem da Mônica Wagner
+  ctaRules     String? // regras de CTA e cupom (nunca falar código no roteiro etc.)
+  allowedVocab String[] @default([])
+  bannedTerms  String[] @default([]) // além da lista fixa ANVISA/CONAR embutida no código
+  disclaimers  String? // texto padrão obrigatório por categoria ("não é medicamento"…)
+  updatedAt    DateTime @default(now()) @updatedAt
+  updatedBy    String?
+}
+
+/// Um dos 10 produtos Élyx. Os FATOS vivem em ProductVersion — este registro é só a
+/// identidade (slug, nome, vínculo com a Shopify) e o status comercial.
+model Product {
+  id         String        @id @default(cuid())
+  slug       String        @unique
+  name       String
+  shopHandle String?
+  status     ProductStatus @default(RASCUNHO)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @default(now()) @updatedAt
+
+  versions      ProductVersion[]
+  claims        Claim[]
+  faqs          Faq[]
+  evidences     Evidence[]
+  assets        Asset[]
+  reviewTasks   ReviewTask[]
+  shopifyMirror ShopifyMirror?
+}
+
+/// Ficha versionada do produto — fórmula e rótulo. Nunca é sobrescrita: uma versão nova
+/// nasce RASCUNHO/PROPOSTA com data de vigência e convive com a VIGENTE até a data chegar
+/// (job activate-versions) ou até ser aprovada e já valer (vigência = hoje).
+model ProductVersion {
+  id             String        @id @default(cuid())
+  product        Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId      String
+  versionNumber  Int
+  status         VersionStatus @default(RASCUNHO)
+  effectiveFrom  DateTime
+  effectiveTo    DateTime?
+  dosage         String? // posologia oficial
+  packaging      String? // embalagem
+  warnings       String? // avisos obrigatórios do rótulo
+  anvisaRegistry String? // registro ou dispensa ANVISA
+  facts          String? // fatos confirmados em texto livre (diferenciais reais)
+  /// foto do rótulo (frente/verso) ou laudo — exigido pra aprovar (regra do desenho, seção 7)
+  documentUrl    String?
+  proposedBy     String?
+  proposedAt     DateTime      @default(now())
+  approvedBy     String?
+  approvedAt     DateTime?
+  createdAt      DateTime      @default(now())
+
+  ingredients Ingredient[]
+
+  @@unique([productId, versionNumber])
+  @@index([productId, status])
+}
+
+/// Item da tabela nutricional de uma versão — nome, quantidade, unidade, %VD.
+model Ingredient {
+  id                  String         @id @default(cuid())
+  version             ProductVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  versionId           String
+  name                String
+  quantity            String?
+  unit                String?
+  dailyValuePercent   String?
+  order               Int            @default(0)
+
+  @@index([versionId])
+}
+
+/// Claim permitido ou proibido — global (vale pra tudo) ou de um produto específico.
+/// Ex: proibido global "milagre"; proibido do CoQ10 "ubiquinol"; permitido do Vitaly
+/// "contribui pra vitalidade da mulher 40+".
+model Claim {
+  id          String     @id @default(cuid())
+  scope       ClaimScope
+  product     Product?   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId   String?
+  type        ClaimType
+  text        String
+  evidenceUrl String?
+  note        String?
+  createdBy   String?
+  createdAt   DateTime   @default(now())
+
+  @@index([productId])
+  @@index([scope, type])
+}
+
+/// Pergunta frequente aprovada — de um produto, ou geral da marca (productId nulo).
+model Faq {
+  id        String   @id @default(cuid())
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String?
+  question  String
+  answer    String
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([productId])
+}
+
+/// Evidência citável (estudo, laudo, matéria) com link — usada em argumentos de venda.
+model Evidence {
+  id        String   @id @default(cuid())
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String?
+  title     String
+  url       String?
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+/// Arquivo de mídia oficial — foto/vídeo/logo de produto, ou identidade visual da marca
+/// (productId nulo: logo, cores, fontes, grid, peças de exemplo).
+model Asset {
+  id        String   @id @default(cuid())
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String?
+  type      String // logo | photo | video | font | guideline
+  blobUrl   String
+  sourceUrl String?
+  label     String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+/// Espelho comercial da Shopify — ÚNICA fonte de preço/estoque/variantes. Atualizado por
+/// webhook (minutos) + reconciliação diária. NUNCA editado na tela do Guardião.
+model ShopifyMirror {
+  id               String   @id @default(cuid())
+  product          Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId        String   @unique
+  shopifyProductId String   @unique
+  handle           String?
+  status           String? // active | draft | archived (Shopify)
+  price            Decimal? @db.Decimal(10, 2)
+  compareAtPrice   Decimal? @db.Decimal(10, 2)
+  variants         Json? // snapshot bruto das variantes (id, título, preço, sku, estoque)
+  images           Json? // snapshot bruto das imagens da loja
+  syncedAt         DateTime @default(now())
+}
+
+/// Regra/programa que não é produto — política de troca, garantia do site, regras das
+/// associadas, kit de boas-vindas. slug estável pra quem consome pela API.
+model Program {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  content   String
+  updatedAt DateTime @default(now()) @updatedAt
+  updatedBy String?
+}
+
+/// Todo fato que muda gera uma linha aqui — auditoria completa (quem, quando, campo,
+/// valor antigo, valor novo, origem, aprovação). Nunca editado nem apagado.
+model ChangeLog {
+  id         String       @id @default(cuid())
+  entity     String // "Product" | "ProductVersion" | "Brand" | "Claim" | "ShopifyMirror" | …
+  entityId   String
+  field      String
+  oldValue   String?
+  newValue   String?
+  origin     ChangeOrigin
+  changedBy  String?
+  approvedBy String?
+  createdAt  DateTime     @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+/// Tarefa aberta automaticamente quando um fato citado muda — lista o conteúdo/sistema
+/// afetado pra alguém revisar. A correção do conteúdo é sempre humana.
+model ReviewTask {
+  id              String       @id @default(cuid())
+  description     String
+  product         Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productId       String?
+  systemsAffected String[]     @default([])
+  status          ReviewStatus @default(PENDENTE)
+  createdAt       DateTime     @default(now())
+  resolvedAt      DateTime?
+  resolvedBy      String?
+
+  @@index([status])
+}
+
+/// Chave de leitura por sistema consumidor (007, Sidney, portal das associadas, futuros
+/// agentes). Só o hash fica salvo — a chave em texto puro é mostrada uma única vez, na
+/// criação (mesmo padrão de "mostra uma vez" de token de API).
+model ApiKey {
+  id         String    @id @default(cuid())
+  consumer   String    @unique // "elyx-007" | "elyx-sidney" | "elyx-associadas" | …
+  keyHash    String
+  keyPreview String // últimos 4 caracteres, só pra reconhecer na tela
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  revokedAt  DateTime?
+}
+
+/// Sistema assinante de eventos (product.updated, guide.updated, review.requested) —
+/// o Guardião chama a URL dele quando algo muda, pra ele limpar o cache local.
+model WebhookSubscriber {
+  id             String    @id @default(cuid())
+  consumer       String
+  url            String
+  secret         String
+  events         String[]  @default(["product.updated", "guide.updated", "review.requested"])
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  lastDeliveryAt DateTime?
+  lastStatus     String?
+}
