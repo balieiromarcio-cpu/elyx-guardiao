@@ -29,6 +29,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const propostas = product.versions.filter((v) => v.status === "PROPOSTA");
   const historico = product.versions.filter((v) => v.status === "ENCERRADA");
   const isAdmin = session.user.role === "ADMIN";
+  const heroPhoto = product.assets.find((a) => a.type === "photo");
 
   async function approveAction(formData: FormData) {
     "use server";
@@ -121,9 +122,15 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="kicker">{product.slug}</p>
-          <h1 className="h1 mt-1">{product.name}</h1>
+        <div className="flex items-center gap-4">
+          {heroPhoto && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={heroPhoto.blobUrl} alt={product.name} className="h-20 w-20 shrink-0 rounded-xl border border-line object-cover" />
+          )}
+          <div>
+            <p className="kicker">{product.slug}</p>
+            <h1 className="h1 mt-1">{product.name}</h1>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <span className={`badge ${product.ignored ? "badge-muted" : product.status === "ATIVO" ? "badge-ok" : product.status === "DESCONTINUADO" ? "badge-muted" : "badge-warn"}`}>

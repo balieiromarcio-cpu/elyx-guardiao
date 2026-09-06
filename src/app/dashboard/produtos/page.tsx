@@ -14,7 +14,7 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Pro
     prisma.product.findMany({
       where: showAll ? {} : { ignored: false },
       orderBy: { name: "asc" },
-      include: { versions: { where: { status: "VIGENTE" } }, shopifyMirror: true },
+      include: { versions: { where: { status: "VIGENTE" } }, shopifyMirror: true, assets: { where: { type: "photo" }, orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }], take: 1 } },
     }),
     prisma.product.count({ where: { ignored: true } }),
   ]);
@@ -42,11 +42,19 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Pro
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {products.map((p) => {
           const vigente = p.versions[0];
+          const photo = p.assets[0];
           return (
             <Link key={p.id} href={`/dashboard/produtos/${p.slug}`} className={`card card-hover flex flex-col gap-3 p-4 ${p.ignored ? "opacity-50" : ""}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-surface-3"><IconBox size={16} className="text-muted" /></span>
+                  <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-surface-3">
+                    {photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={photo.blobUrl} alt={p.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <IconBox size={16} className="text-muted" />
+                    )}
+                  </span>
                   <div>
                     <p className="font-semibold">{p.name}</p>
                     <p className="text-xs text-muted">{p.slug}</p>
