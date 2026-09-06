@@ -49,7 +49,8 @@ mostrada uma única vez).
 |---|---|
 | `GET /v1/products/:slug` | JSON estruturado (ficha vigente + comercial + claims + FAQ) |
 | `GET /v1/products/:slug/context` | bloco de texto pronto pra prompt |
-| `GET /v1/brand` / `GET /v1/brand/context` | mesma coisa pra marca |
+| `GET /v1/brand` / `GET /v1/brand/context` | mesma coisa pra marca (inclui identidade visual e regras de imagem) |
+| `GET /v1/brand/assets` | identidade visual completa pra quem gera peça: cores (hex), nome das fontes, logo renderizável (png/svg), arquivos de fonte (.ttf/.otf/.woff), prints "Post que gostei", fotos de referência, manuais, links de posts que gostei. O Sidney monta toda lâmina a partir disto — e só disto |
 | `POST /v1/compliance/check` `{text, product}` | lista fixa ANVISA/CONAR + guia + claims |
 | `POST /api/webhooks/shopify` | recebido da Shopify (HMAC verificado), não pra terceiros |
 

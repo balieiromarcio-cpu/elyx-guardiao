@@ -1,0 +1,29 @@
+import "dotenv/config";
+import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaNeon } from "@prisma/adapter-neon";
+
+/**
+ * Regras de imagem reescritas a partir dos 18 prints "Post que gostei" carregados no Guardião em
+ * 06/09/2026 (não da apresentação comercial): estética clara, arejada, editorial e minimalista.
+ * Sobrescreve o campo imageRules do Guia da marca (fica no changelog; edite na tela depois).
+ */
+const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString: process.env.DATABASE_URL }) });
+
+const IMAGE_RULES = [
+  "REFERÊNCIA MANDA: os prints 'Post que gostei' carregados aqui definem o look. Tudo abaixo descreve o que eles têm em comum.",
+  "LUZ E COR: fotografia editorial CLARA e arejada — luz natural difusa (janela, cortina de voile, fim de tarde suave), muito branco, creme, bege, areia e madeira clara; toques de verde-salva/eucalipto. Sombras longas e suaves são bem-vindas. NUNCA fundo escuro, bordô saturado, vermelho, HDR, flash duro ou cor 'de banco de imagem'.",
+  "CENÁRIO: interior brasileiro minimalista e sofisticado — quarto de lençol branco, poltrona de madeira e linho, parede lisa, mesa de canto com livro, vela e vaso de eucalipto; varanda com luz. Poucos objetos, cada um com intenção. Nada de cozinha de propaganda, farmácia, academia, consultório, balança, fita métrica, comprimidos espalhados.",
+  "PESSOA: a leitora — mulher brasileira de 40 a 55 anos, real (pele com textura, linhas de expressão, cabelo natural, pode ter fios brancos), serena, elegante, roupa clara e neutra (linho, pijama de seda creme, vestido bege). Expressão íntima e calma, não 'sorriso de propaganda'. Pode aparecer de costas, desfocada em movimento, deitada, olhando pela janela. NUNCA mulher de 20-30 anos representando a leitora, nunca hipersexualizada, nunca jaleco.",
+  "COMPOSIÇÃO: muito espaço negativo (parede lisa, lençol, céu claro) na PARTE SUPERIOR da imagem, onde o texto vai ser sobreposto; assunto principal no terço inferior. Enquadramento vertical 4:5, lente de retrato, leve desfoque de fundo.",
+  "PRODUTO: só quando a peça é de produto, e SEMPRE a partir da foto oficial (frasco âmbar, tampa dourada, rótulo com o lótus), integrado à cena com naturalidade (mesa de cabeceira, bancada clara ao lado de um copo d'água). A IA não redesenha rótulo, cor nem tampa.",
+  "TEXTO (aplicado pelo template, nunca pela IA): título na fonte de título (serifa alta, itálica quando disponível), texto na fonte de texto (sans geométrica limpa). Cor do texto: verde-escuro sobre foto clara, creme sobre foto mais quente. Sem caixa quando a foto tem espaço limpo; caixa branca translúcida só nas lâminas de texto longas. Logo = lótus em contorno, pequeno, canto inferior esquerdo; seta circular no canto inferior direito.",
+  "NUNCA na imagem: texto, letra, logotipo ou marca d'água gerados pela IA; antes/depois; corpo 'fitness'; mão com comprimido na boca; estética de suplemento masculino; excesso de dourado.",
+].join("\n");
+
+async function main() {
+  const b = await prisma.brand.findUniqueOrThrow({ where: { id: "default" } });
+  await prisma.brand.update({ where: { id: "default" }, data: { imageRules: IMAGE_RULES, updatedBy: "update-image-rules (06/09/2026, a partir dos prints)" } });
+  await prisma.changeLog.create({ data: { entity: "Brand", entityId: "default", field: "imageRules", oldValue: (b.imageRules ?? "").slice(0, 500), newValue: IMAGE_RULES.slice(0, 500), origin: "MANUAL", changedBy: "update-image-rules" } });
+  console.log("imageRules atualizado a partir dos prints de referência.");
+}
+main().finally(() => prisma.$disconnect());
