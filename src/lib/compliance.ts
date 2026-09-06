@@ -87,5 +87,6 @@ export async function brandContextBlock(): Promise<string> {
   if (b.bannedTerms.length) lines.push(`Termos proibidos (globais): ${b.bannedTerms.join(", ")}.`);
   if (globalForbidden.length) lines.push(`Claims proibidos (globais): ${globalForbidden.map((c) => c.text).join(", ")}.`);
   if (b.disclaimers) lines.push(`Disclaimers obrigatórios: ${b.disclaimers}`);
+  if (b.imageRules) lines.push(`Imagem (como é uma imagem Élyx): ${b.imageRules}`);
   return lines.join("\n");
 }

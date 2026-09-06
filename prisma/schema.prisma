@@ -82,6 +82,16 @@ model Brand {
   allowedVocab String[] @default([])
   bannedTerms  String[] @default([]) // além da lista fixa ANVISA/CONAR embutida no código
   disclaimers  String? // texto padrão obrigatório por categoria ("não é medicamento"…)
+  /// Identidade visual — a ÚNICA fonte de cor, fonte e regra de imagem pra quem gera peça
+  /// (Sidney, 007). Hex nas cores; nome das fontes (o arquivo vai em Asset type "font").
+  colorPrimary    String? // bordô — fundo de capa/CTA, título em fundo claro
+  colorSecondary  String? // verde-escuro — fundo alternativo
+  colorBackground String? // creme — fundo das lâminas de texto, caixa de texto
+  colorAccent     String? // dourado — filetes, logo, destaques
+  colorText       String? // texto corrido em fundo claro
+  fontDisplay     String? // nome da fonte de título (ex.: "TAN Aegean")
+  fontBody        String? // nome da fonte de texto (ex.: "Agrandir")
+  imageRules      String? // como é (e como NÃO é) uma imagem Élyx — luz, cenário, pessoa, proibições
   updatedAt    DateTime @default(now()) @updatedAt
   updatedBy    String?
 }

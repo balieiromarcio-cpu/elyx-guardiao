@@ -19,6 +19,7 @@ export default async function MarcaPage({ searchParams }: { searchParams: Promis
     prisma.evidence.findMany({ where: { productId: null }, orderBy: { createdAt: "desc" } }),
   ]);
   const { ok } = await searchParams;
+  const fontFileNames = assets.filter((a) => /\.(ttf|otf|woff)(\?|$)/i.test(a.blobUrl)).map((a) => decodeURIComponent(a.blobUrl.split("/").pop() ?? ""));
 
   async function addEvidence(formData: FormData) {
     "use server";
@@ -44,7 +45,7 @@ export default async function MarcaPage({ searchParams }: { searchParams: Promis
     "use server";
     const s = await auth();
     if (!s) redirect("/login");
-    const fields = ["purpose", "persona", "voiceRules", "monicaRules", "ctaRules", "disclaimers"] as const;
+    const fields = ["purpose", "persona", "voiceRules", "monicaRules", "ctaRules", "disclaimers", "colorPrimary", "colorSecondary", "colorBackground", "colorAccent", "colorText", "fontDisplay", "fontBody", "imageRules"] as const;
     const listFields = ["allowedVocab", "bannedTerms"] as const;
     const current = await getBrand();
     const data: Record<string, unknown> = {};
@@ -91,6 +92,27 @@ export default async function MarcaPage({ searchParams }: { searchParams: Promis
           </Field>
         </div>
         <Field label="Disclaimers obrigatórios"><textarea name="disclaimers" defaultValue={brand.disclaimers ?? ""} className="input min-h-[70px]" /></Field>
+
+        <div className="border-t border-line pt-4">
+          <h2 className="text-sm font-semibold">Identidade visual</h2>
+          <p className="text-xs text-muted">Única fonte de cor, fonte e regra de imagem pra quem gera peça (Sidney lê em GET /v1/brand/assets). Cor em hex (#5C1F2E). O arquivo da fonte (.ttf/.otf) sobe na seção de material abaixo, como “Fonte”.</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <ColorField name="colorPrimary" label="Primária (bordô)" value={brand.colorPrimary} />
+          <ColorField name="colorSecondary" label="Secundária (verde)" value={brand.colorSecondary} />
+          <ColorField name="colorBackground" label="Fundo (creme)" value={brand.colorBackground} />
+          <ColorField name="colorAccent" label="Destaque (dourado)" value={brand.colorAccent} />
+          <ColorField name="colorText" label="Texto" value={brand.colorText} />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Fonte de título" hint={fontFileNames.length ? `arquivos carregados: ${fontFileNames.join(", ")}` : "nenhum arquivo de fonte carregado ainda — o Sidney avisa e usa fonte provisória"}>
+            <input name="fontDisplay" defaultValue={brand.fontDisplay ?? ""} placeholder="ex.: TAN Aegean" className="input" />
+          </Field>
+          <Field label="Fonte de texto"><input name="fontBody" defaultValue={brand.fontBody ?? ""} placeholder="ex.: Agrandir" className="input" /></Field>
+        </div>
+        <Field label="Regras de imagem — como é (e como não é) uma imagem Élyx" hint="luz, cenário, pessoa, produto, o que nunca aparece. Vai direto pro prompt da IA e pro revisor automático de imagem.">
+          <textarea name="imageRules" defaultValue={brand.imageRules ?? ""} className="input min-h-[120px]" />
+        </Field>
         <button type="submit" className="btn btn-primary btn-sm">Salvar guia</button>
       </form>
 
@@ -129,6 +151,18 @@ export default async function MarcaPage({ searchParams }: { searchParams: Promis
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function ColorField({ name, label, value }: { name: string; label: string; value: string | null }) {
+  return (
+    <div className="space-y-1">
+      <label className="label">{label}</label>
+      <div className="flex items-center gap-2">
+        <span className="inline-block h-8 w-8 shrink-0 rounded-md border border-line" style={{ backgroundColor: value ?? "transparent" }} />
+        <input name={name} defaultValue={value ?? ""} placeholder="#5C1F2E" pattern="^#[0-9a-fA-F]{6}$" className="input font-mono" />
+      </div>
     </div>
   );
 }

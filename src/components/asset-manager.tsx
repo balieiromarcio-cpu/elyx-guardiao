@@ -11,7 +11,7 @@ const TYPES = [
   { value: "logo", label: "Logo" },
   { value: "guideline", label: "Manual de marca / guideline" },
   { value: "photo", label: "Foto de referência" },
-  { value: "font", label: "Fonte" },
+  { value: "font", label: "Fonte (arquivo .ttf/.otf)" },
   { value: "reference", label: "Post/anúncio que gostei (print)" },
   { value: "video", label: "Vídeo" },
 ];

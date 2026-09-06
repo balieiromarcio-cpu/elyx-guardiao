@@ -19,6 +19,11 @@ export async function GET(req: NextRequest) {
     termosProibidos: brand.bannedTerms,
     claimsGlobais: globalClaims.map((c) => ({ tipo: c.type, texto: c.text })),
     disclaimers: brand.disclaimers,
+    identidadeVisual: {
+      cores: { primaria: brand.colorPrimary, secundaria: brand.colorSecondary, fundo: brand.colorBackground, destaque: brand.colorAccent, texto: brand.colorText },
+      fontes: { titulo: brand.fontDisplay, texto: brand.fontBody },
+      regrasImagem: brand.imageRules,
+    },
     atualizadoEm: brand.updatedAt,
   });
 }
