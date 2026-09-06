@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { approveVersion } from "@/lib/versioning";
 import { VersionEditor } from "@/components/version-editor";
+import { AssetManager } from "@/components/asset-manager";
 import { IconExternal, IconCheck, IconAlert, IconTrash } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       versions: { orderBy: { versionNumber: "desc" }, include: { ingredients: { orderBy: { order: "asc" } } } },
       claims: { orderBy: { createdAt: "desc" } },
       faqs: { orderBy: { createdAt: "desc" } },
+      assets: { orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }] },
       shopifyMirror: true,
     },
   });
@@ -86,6 +88,20 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     redirect(`/dashboard/produtos/${slug}`);
   }
 
+  async function addProductAsset(input: { type: string; blobUrl: string; label: string | null }) {
+    "use server";
+    const s = await auth();
+    if (!s) throw new Error("unauthorized");
+    await prisma.asset.create({ data: { productId: product!.id, type: input.type, blobUrl: input.blobUrl, label: input.label } });
+  }
+
+  async function deleteProductAsset(id: string) {
+    "use server";
+    const s = await auth();
+    if (!s) throw new Error("unauthorized");
+    await prisma.asset.delete({ where: { id } }).catch(() => null);
+  }
+
   async function toggleIgnored() {
     "use server";
     const s = await auth();
@@ -128,6 +144,19 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           &quot;ignorar&quot; em vez de excluir.
         </p>
       )}
+
+      {/* Fotos e mídia do produto */}
+      <section className="card space-y-3 p-4">
+        <div>
+          <h2 className="text-sm font-semibold">Fotos e mídia ({product.assets.length})</h2>
+          <p className="text-xs text-muted">Galeria puxada da Shopify — inclui a foto da tabela nutricional, quando existe. Pode adicionar mais aqui.</p>
+        </div>
+        <AssetManager
+          assets={product.assets.map((a) => ({ id: a.id, type: a.type, blobUrl: a.blobUrl, label: a.label, createdAt: a.createdAt.toISOString() }))}
+          onAdd={addProductAsset}
+          onDelete={deleteProductAsset}
+        />
+      </section>
 
       {/* Comercial — espelho da Shopify, nunca editável aqui */}
       <section className="card p-4">
