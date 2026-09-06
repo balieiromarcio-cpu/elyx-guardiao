@@ -14,7 +14,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   const { slug } = await params;
   const product = await prisma.product.findUnique({
     where: { slug },
-    include: { shopifyMirror: true, claims: true, faqs: { where: { approved: true } } },
+    include: {
+      shopifyMirror: true,
+      claims: true,
+      faqs: { where: { approved: true } },
+      assets: { where: { type: "photo" }, orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }] },
+    },
   });
   if (!product) return NextResponse.json({ error: "não encontrado" }, { status: 404 });
   const version = await getActiveVersion(product.id);
@@ -24,6 +29,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
     name: product.name,
     status: product.status,
     shopHandle: product.shopHandle,
+    fotos: {
+      principal: product.assets.find((a) => a.isPrimary)?.blobUrl ?? product.assets[0]?.blobUrl ?? null,
+      todas: product.assets.map((a) => ({ url: a.blobUrl, label: a.label, principal: a.isPrimary })),
+    },
     comercial: product.shopifyMirror
       ? {
           preco: product.shopifyMirror.price,
