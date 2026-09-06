@@ -86,6 +86,22 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     redirect(`/dashboard/produtos/${slug}`);
   }
 
+  async function toggleIgnored() {
+    "use server";
+    const s = await auth();
+    if (!s || s.user.role !== "ADMIN") redirect(`/dashboard/produtos/${slug}`);
+    await prisma.product.update({ where: { slug }, data: { ignored: !product!.ignored } });
+    redirect(product!.ignored ? `/dashboard/produtos/${slug}` : "/dashboard/produtos");
+  }
+
+  async function deleteProduct() {
+    "use server";
+    const s = await auth();
+    if (!s || s.user.role !== "ADMIN") redirect(`/dashboard/produtos/${slug}`);
+    await prisma.product.delete({ where: { slug } }).catch(() => null);
+    redirect("/dashboard/produtos");
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -93,8 +109,25 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           <p className="kicker">{product.slug}</p>
           <h1 className="h1 mt-1">{product.name}</h1>
         </div>
-        <span className={`badge ${product.status === "ATIVO" ? "badge-ok" : product.status === "DESCONTINUADO" ? "badge-muted" : "badge-warn"}`}>{product.status.toLowerCase()}</span>
+        <div className="flex items-center gap-2">
+          <span className={`badge ${product.ignored ? "badge-muted" : product.status === "ATIVO" ? "badge-ok" : product.status === "DESCONTINUADO" ? "badge-muted" : "badge-warn"}`}>
+            {product.ignored ? "ignorado" : product.status.toLowerCase()}
+          </span>
+          {isAdmin && (
+            <>
+              <form action={toggleIgnored}><button type="submit" className="btn btn-secondary btn-xs">{product.ignored ? "reativar" : "ignorar"}</button></form>
+              <form action={deleteProduct}><button type="submit" className="btn btn-ghost btn-xs text-danger"><IconTrash size={12} /> excluir</button></form>
+            </>
+          )}
+        </div>
       </div>
+      {isAdmin && product.shopHandle && (
+        <p className="text-xs text-muted">
+          Este produto vem da Shopify (handle <code>{product.shopHandle}</code>) — se excluir e o item ainda existir na
+          loja, a próxima sincronização (diária, 6h) traz ele de volta. Pra sumir de vez sem apagar o histórico, use
+          &quot;ignorar&quot; em vez de excluir.
+        </p>
+      )}
 
       {/* Comercial — espelho da Shopify, nunca editável aqui */}
       <section className="card p-4">

@@ -94,6 +94,11 @@ model Product {
   name       String
   shopHandle String?
   status     ProductStatus @default(RASCUNHO)
+  /// "Ignorar" — some da lista e a sincronização com a Shopify para de recriá-lo (ao contrário
+  /// de excluir, que volta na próxima reconciliação se o item ainda existir na loja). Uso
+  /// típico: item de merch/variante duplicada importado sem querer (ex: uma camiseta por
+  /// tamanho, cada uma como "produto" separado na Shopify).
+  ignored    Boolean       @default(false)
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @default(now()) @updatedAt
 

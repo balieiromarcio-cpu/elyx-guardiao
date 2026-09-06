@@ -6,8 +6,8 @@ import { IconAlert, IconCheck, IconExternal } from "@/components/icons";
 
 export default async function OverviewPage() {
   const [products, versionsVigentes, pendingTasks, recentChanges, apiKeys, shopifyOk] = await Promise.all([
-    prisma.product.findMany({ orderBy: { name: "asc" } }),
-    prisma.productVersion.count({ where: { status: "VIGENTE" } }),
+    prisma.product.findMany({ where: { ignored: false }, orderBy: { name: "asc" } }),
+    prisma.productVersion.count({ where: { status: "VIGENTE", product: { ignored: false } } }),
     prisma.reviewTask.findMany({ where: { status: "PENDENTE" }, orderBy: { createdAt: "desc" }, take: 5, include: { product: true } }),
     prisma.changeLog.findMany({ orderBy: { createdAt: "desc" }, take: 6 }),
     prisma.apiKey.count({ where: { revokedAt: null } }),
