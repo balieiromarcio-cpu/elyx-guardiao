@@ -61,8 +61,11 @@ via POST assinado em HMAC-SHA256 (header `X-Guardiao-Signature`).
 - Neon — projeto **novo**, separado dos outros apps.
 - Vercel `elyx-nutrition/elyx-guardiao`. Deploy: `npx vercel deploy --prod --yes`.
 - Env (Vercel + `.env` local): ver `.env.example`. Segredos nunca vão pro git.
-- Shopify: app customizado na loja, escopo `read_products` + webhooks de produto. Depois do
-  primeiro deploy, rode "Registrar webhooks na Shopify" em Configurações (usa a URL de produção).
+- Shopify: app "Guardiao Elyx" criado no Dev Dashboard (dev.shopify.com), escopo `read_products`.
+  A loja não emite mais token estático — instala-se clicando "Instalar app" na Shopify, que
+  troca o código pelo token via `/api/shopify/callback` e guarda em `ShopifyConnection` (banco).
+  Só `SHOPIFY_API_KEY`/`SHOPIFY_API_SECRET` (Configurações do app → Credenciais) vão em env var.
+  Depois de conectado, rode "Registrar webhooks na Shopify" em Configurações.
 - E-mail: Resend, mesmo provedor do elyx-associadas (`RESEND_API_KEY`, `EMAIL_FROM`).
 - Git: repositório `github.com/balieiromarcio-cpu/elyx-guardiao` (branch `main`).
 

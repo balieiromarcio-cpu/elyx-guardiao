@@ -286,6 +286,19 @@ model ApiKey {
   revokedAt  DateTime?
 }
 
+/// Conexão OAuth com a loja Shopify (linha única, id "default"). A loja parou de oferecer
+/// token estático de app customizado — só instala trocando código por token (OAuth padrão),
+/// mesmo em apps criados como "legado" no Dev Dashboard. Guardado aqui, não em env var,
+/// porque só existe depois que alguém clica "Instalar app" na Shopify.
+model ShopifyConnection {
+  id          String   @id @default("default")
+  shop        String // domínio myshopify.com da loja conectada
+  accessToken String
+  scope       String?
+  installedAt DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+}
+
 /// Sistema assinante de eventos (product.updated, guide.updated, review.requested) —
 /// o Guardião chama a URL dele quando algo muda, pra ele limpar o cache local.
 model WebhookSubscriber {

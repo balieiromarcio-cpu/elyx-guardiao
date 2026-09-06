@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { fetchAllShopifyProducts, shopifyConfigured, registerShopifyWebhooks } from "@/lib/shopify";
+import { fetchAllShopifyProducts, shopifyConfigured, shopifyConnectionInfo, registerShopifyWebhooks } from "@/lib/shopify";
 import { upsertShopifyMirror } from "@/lib/shopify-sync";
 import { headers } from "next/headers";
 import { IconCheck, IconAlert } from "@/components/icons";
@@ -17,6 +17,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
   const users = isAdmin ? await prisma.user.findMany({ orderBy: { createdAt: "asc" } }) : [];
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
+  const shopifyConn = await shopifyConnectionInfo();
 
   async function changePassword(formData: FormData) {
     "use server";
@@ -68,7 +69,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     "use server";
     const s = await auth();
     if (!s || s.user.role !== "ADMIN") redirect("/login");
-    if (!shopifyConfigured()) redirect("/dashboard/configuracoes?erro=" + encodeURIComponent("Cadastre SHOPIFY_STORE_DOMAIN e SHOPIFY_ADMIN_ACCESS_TOKEN na Vercel antes."));
+    if (!(await shopifyConfigured())) redirect("/dashboard/configuracoes?erro=" + encodeURIComponent("Conecte a Shopify primeiro (instale o app pela Shopify, ou cadastre SHOPIFY_STORE_DOMAIN/SHOPIFY_ADMIN_ACCESS_TOKEN na Vercel)."));
     try {
       const products = await fetchAllShopifyProducts();
       for (const p of products) await upsertShopifyMirror(p, "IMPORT");
@@ -104,7 +105,12 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       <section className="card p-4">
         <h2 className="mb-3 text-sm font-semibold">Shopify</h2>
         <p className="mb-3 text-xs text-muted">
-          Domínio: <code>{process.env.SHOPIFY_STORE_DOMAIN ?? "não configurado"}</code> · webhook recebe em <code>{origin}/api/webhooks/shopify</code>
+          {shopifyConn ? (
+            <>Conectada: <code>{shopifyConn.shop}</code> {shopifyConn.via === "oauth" ? "(instalada pela Shopify)" : "(via env var)"}</>
+          ) : (
+            "Ainda não conectada — clique em \"Instalar app\" no Dev Dashboard da Shopify pra conectar."
+          )}
+          {" "}· webhook recebe em <code>{origin}/api/webhooks/shopify</code>
         </p>
         <div className="flex flex-wrap gap-2">
           <form action={importShopify}><button type="submit" className="btn btn-secondary btn-sm">Importar produtos agora</button></form>

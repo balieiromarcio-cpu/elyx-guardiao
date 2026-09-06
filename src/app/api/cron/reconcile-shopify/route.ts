@@ -8,7 +8,7 @@ export const maxDuration = 120;
 /** Diário 6h05 — confere se algum webhook se perdeu (regra do desenho, seção 3). Silencioso se não achar divergência. */
 export async function GET(req: NextRequest) {
   if (!isValidCronAuth(req.headers.get("authorization"))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  if (!shopifyConfigured()) return NextResponse.json({ ok: false, skipped: "Shopify não configurada" });
+  if (!(await shopifyConfigured())) return NextResponse.json({ ok: false, skipped: "Shopify não configurada" });
 
   const products = await fetchAllShopifyProducts();
   for (const p of products) await upsertShopifyMirror(p, "SHOPIFY");

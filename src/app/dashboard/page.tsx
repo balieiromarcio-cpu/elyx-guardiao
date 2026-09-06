@@ -5,12 +5,13 @@ import { isEmailConfigured } from "@/lib/email";
 import { IconAlert, IconCheck, IconExternal } from "@/components/icons";
 
 export default async function OverviewPage() {
-  const [products, versionsVigentes, pendingTasks, recentChanges, apiKeys] = await Promise.all([
+  const [products, versionsVigentes, pendingTasks, recentChanges, apiKeys, shopifyOk] = await Promise.all([
     prisma.product.findMany({ orderBy: { name: "asc" } }),
     prisma.productVersion.count({ where: { status: "VIGENTE" } }),
     prisma.reviewTask.findMany({ where: { status: "PENDENTE" }, orderBy: { createdAt: "desc" }, take: 5, include: { product: true } }),
     prisma.changeLog.findMany({ orderBy: { createdAt: "desc" }, take: 6 }),
     prisma.apiKey.count({ where: { revokedAt: null } }),
+    shopifyConfigured(),
   ]);
 
   const semFicha = products.length - versionsVigentes;
@@ -39,7 +40,7 @@ export default async function OverviewPage() {
             <h2 className="text-sm font-semibold">Integrações</h2>
           </div>
           <ul className="space-y-2 text-sm">
-            <IntegrationRow label="Shopify (comercial)" ok={shopifyConfigured()} hint="preço, estoque, variantes — webhook + reconciliação diária" />
+            <IntegrationRow label="Shopify (comercial)" ok={shopifyOk} hint="preço, estoque, variantes — webhook + reconciliação diária" />
             <IntegrationRow label="E-mail de aviso (Resend)" ok={isEmailConfigured()} hint="avisa a equipe quando um fato citado muda" />
           </ul>
         </section>
