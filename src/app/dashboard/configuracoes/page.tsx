@@ -70,13 +70,17 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     const s = await auth();
     if (!s || s.user.role !== "ADMIN") redirect("/login");
     if (!(await shopifyConfigured())) redirect("/dashboard/configuracoes?erro=" + encodeURIComponent("Conecte a Shopify primeiro (instale o app pela Shopify, ou cadastre SHOPIFY_STORE_DOMAIN/SHOPIFY_ADMIN_ACCESS_TOKEN na Vercel)."));
+    // redirect() lança um sinal interno do Next (NEXT_REDIRECT) — nunca pode ficar dentro do
+    // try/catch, senão o catch trata o próprio redirect como erro (bug já visto em produção).
+    let query: string;
     try {
       const products = await fetchAllShopifyProducts();
       for (const p of products) await upsertShopifyMirror(p, "IMPORT");
-      redirect("/dashboard/configuracoes?ok=" + encodeURIComponent(`${products.length} produto(s) importado(s)/atualizado(s) da Shopify.`));
+      query = "ok=" + encodeURIComponent(`${products.length} produto(s) importado(s)/atualizado(s) da Shopify.`);
     } catch (e) {
-      redirect("/dashboard/configuracoes?erro=" + encodeURIComponent(e instanceof Error ? e.message : String(e)));
+      query = "erro=" + encodeURIComponent(e instanceof Error ? e.message : String(e));
     }
+    redirect(`/dashboard/configuracoes?${query}`);
   }
 
   async function registerWebhooks() {
@@ -85,12 +89,14 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     if (!s || s.user.role !== "ADMIN") redirect("/login");
     const h2 = await headers();
     const base = `${h2.get("x-forwarded-proto") ?? "https"}://${h2.get("host")}`;
+    let query: string;
     try {
       const results = await registerShopifyWebhooks(base);
-      redirect("/dashboard/configuracoes?ok=" + encodeURIComponent(results.map((r) => `${r.topic}: ${r.ok ? "ok" : "falhou"}`).join(" · ")));
+      query = "ok=" + encodeURIComponent(results.map((r) => `${r.topic}: ${r.ok ? "ok" : "falhou"}`).join(" · "));
     } catch (e) {
-      redirect("/dashboard/configuracoes?erro=" + encodeURIComponent(e instanceof Error ? e.message : String(e)));
+      query = "erro=" + encodeURIComponent(e instanceof Error ? e.message : String(e));
     }
+    redirect(`/dashboard/configuracoes?${query}`);
   }
 
   return (
