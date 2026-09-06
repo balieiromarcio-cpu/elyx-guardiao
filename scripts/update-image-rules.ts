@@ -3,6 +3,22 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 
 /**
+ * Regras de imagem = só restrições fixas. O ESTILO vem dos prints "Post que gostei" (o Sidney deriva o guia
+ * deles com visão computacional e os envia como referência). Sobrescreve imageRules (fica no changelog).
+ */
+const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString: process.env.DATABASE_URL }) });
+
+const IMAGE_RULES = [
+  "A BASE SÃO OS PRINTS: o estilo (modelo, figurino, cenário, luz, paleta, enquadramento) é o dos posts 'Post que gostei' carregados aqui — o Sidney extrai o guia deles automaticamente e os envia como referência. Estas linhas são só restrições fixas por cima.",
+  "PRODUTO: só quando a peça é de produto, e SEMPRE a partir da foto oficial (frasco âmbar, tampa dourada, rótulo com o lótus). A IA não redesenha rótulo, cor nem tampa.",
+  "ESPAÇO PARA O TEXTO: parede lisa, lençol, céu ou fundo desfocado no TERÇO SUPERIOR (4:5) ou na metade esquerda (16:9), sem sombra forte, objeto ou rosto ali — o template escreve o título nesse espaço.",
+  "NUNCA na imagem: texto, letra, logotipo ou marca d'água gerados pela IA; antes/depois; balança; fita métrica; comprimidos espalhados; mão com cápsula na boca; jaleco; academia; farmácia; estética de suplemento masculino; pessoa deformada (mãos, dentes, olhos).",
+].join("
+");env/config";
+import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaNeon } from "@prisma/adapter-neon";
+
+/**
  * Regras de imagem reescritas a partir dos 18 prints "Post que gostei" carregados no Guardião em
  * 06/09/2026 (não da apresentação comercial): estética clara, arejada, editorial e minimalista.
  * Sobrescreve o campo imageRules do Guia da marca (fica no changelog; edite na tela depois).
