@@ -80,7 +80,10 @@ export function VersionEditor({ slug }: { slug: string }) {
       <div>
         <p className="label mb-1">Foto do rótulo ou laudo (obrigatório pra aprovar)</p>
         <div className="flex items-center gap-2">
-          <input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-xs" />
+          <label className="btn btn-secondary btn-xs cursor-pointer">
+            {file ? file.name.slice(0, 20) : "Escolher arquivo"}
+            <input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="hidden" />
+          </label>
           <button type="button" onClick={uploadDoc} disabled={!file || busy} className="btn btn-secondary btn-xs">
             <IconUpload size={12} /> anexar
           </button>

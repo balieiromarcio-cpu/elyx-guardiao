@@ -70,8 +70,16 @@ export function AssetManager({
           ))}
         </select>
         <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="legenda (opcional)" className="input flex-1 min-w-[180px]" />
-        <input type="file" accept="image/*,video/*,application/pdf,font/*,.otf,.ttf,.woff,.woff2" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-xs" />
-        <button type="button" onClick={send} disabled={!file || busy} className="btn btn-secondary btn-sm">
+        <label className="btn btn-secondary btn-sm cursor-pointer">
+          {file ? file.name.slice(0, 24) : "Escolher arquivo"}
+          <input
+            type="file"
+            accept="image/*,video/*,application/pdf,font/*,.otf,.ttf,.woff,.woff2"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="hidden"
+          />
+        </label>
+        <button type="button" onClick={send} disabled={!file || busy} className="btn btn-primary btn-sm">
           <IconUpload size={13} /> {busy ? "Enviando…" : "Enviar"}
         </button>
         {msg && <span className={`text-xs ${msg.ok ? "text-ok" : "text-danger"}`}>{msg.text}</span>}
