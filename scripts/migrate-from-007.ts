@@ -67,7 +67,7 @@ async function main() {
         proposedBy: "migração 007",
         approvedBy: "migração 007",
         approvedAt: new Date(),
-        ingredients: { create: p.ingredients.map((name, idx) => ({ name, order: idx })) },
+        ingredients: { create: p.ingredients.map((name: string, idx: number) => ({ name, order: idx })) },
       },
     });
 
