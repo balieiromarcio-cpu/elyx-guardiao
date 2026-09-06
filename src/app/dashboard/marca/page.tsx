@@ -4,14 +4,41 @@ import { getBrand } from "@/lib/compliance";
 import { logChange } from "@/lib/versioning";
 import { dispatchEvent } from "@/lib/webhooks";
 import { prisma } from "@/lib/prisma";
+import { AssetManager } from "@/components/asset-manager";
+import { addBrandAsset, deleteBrandAsset } from "./actions";
+import { IconExternal, IconTrash } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
 export default async function MarcaPage({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
   const session = await auth();
   if (!session) redirect("/login");
-  const brand = await getBrand();
+  const [brand, assets, evidences] = await Promise.all([
+    getBrand(),
+    prisma.asset.findMany({ where: { productId: null }, orderBy: { createdAt: "desc" } }),
+    prisma.evidence.findMany({ where: { productId: null }, orderBy: { createdAt: "desc" } }),
+  ]);
   const { ok } = await searchParams;
+
+  async function addEvidence(formData: FormData) {
+    "use server";
+    const s = await auth();
+    if (!s) redirect("/login");
+    const title = String(formData.get("title") ?? "").trim();
+    const url = String(formData.get("url") ?? "").trim();
+    const note = String(formData.get("note") ?? "").trim();
+    if (!title) redirect("/dashboard/marca");
+    await prisma.evidence.create({ data: { productId: null, title, url: url || null, note: note || null } });
+    redirect("/dashboard/marca");
+  }
+
+  async function removeEvidence(formData: FormData) {
+    "use server";
+    const s = await auth();
+    if (!s) redirect("/login");
+    await prisma.evidence.delete({ where: { id: String(formData.get("id")) } }).catch(() => null);
+    redirect("/dashboard/marca");
+  }
 
   async function save(formData: FormData) {
     "use server";
@@ -66,6 +93,42 @@ export default async function MarcaPage({ searchParams }: { searchParams: Promis
         <Field label="Disclaimers obrigatórios"><textarea name="disclaimers" defaultValue={brand.disclaimers ?? ""} className="input min-h-[70px]" /></Field>
         <button type="submit" className="btn btn-primary btn-sm">Salvar guia</button>
       </form>
+
+      <section className="card space-y-3 p-4">
+        <div>
+          <h2 className="text-sm font-semibold">Identidade visual e material de base</h2>
+          <p className="text-xs text-muted">Logo, manual de marca, fontes, prints de posts/anúncios que você gostou pra usar de referência. Fica salvo aqui, não some do computador de ninguém.</p>
+        </div>
+        <AssetManager
+          assets={assets.map((a) => ({ id: a.id, type: a.type, blobUrl: a.blobUrl, label: a.label, createdAt: a.createdAt.toISOString() }))}
+          onAdd={addBrandAsset}
+          onDelete={deleteBrandAsset}
+        />
+      </section>
+
+      <section className="card space-y-3 p-4">
+        <div>
+          <h2 className="text-sm font-semibold">Referências e evidências</h2>
+          <p className="text-xs text-muted">Links — estudo, matéria, post de concorrente ou inspiração — com uma nota de por que serve de referência.</p>
+        </div>
+        <form action={addEvidence} className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+          <input name="title" placeholder="título" required className="input" />
+          <input name="url" placeholder="link (opcional)" className="input" />
+          <input name="note" placeholder="por que é referência" className="input" />
+          <button type="submit" className="btn btn-secondary btn-sm">adicionar</button>
+        </form>
+        <div className="space-y-1">
+          {evidences.length === 0 && <p className="text-xs text-muted">Nenhuma referência salva ainda.</p>}
+          {evidences.map((e) => (
+            <div key={e.id} className="flex items-center gap-2 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm">
+              <span className="font-medium">{e.title}</span>
+              {e.url && <a href={e.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-accent hover:underline">abrir <IconExternal size={11} /></a>}
+              {e.note && <span className="text-xs text-muted">— {e.note}</span>}
+              <form action={removeEvidence} className="ml-auto"><input type="hidden" name="id" value={e.id} /><button type="submit" className="btn btn-ghost btn-xs px-1 text-danger"><IconTrash size={12} /></button></form>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
