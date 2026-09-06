@@ -29,7 +29,8 @@ export default async function LoginPage({
     <div className="flex min-h-screen items-center justify-center bg-bg px-4">
       <form action={login} className="w-full max-w-sm space-y-5 rounded-xl border border-line bg-surface p-8 shadow-lg">
         <div className="flex flex-col items-center gap-1">
-          <span className="grid h-11 w-11 place-items-center rounded-lg bg-accent font-bold text-black">GE</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mark.png" alt="Élyx" className="h-16 w-16 object-contain" />
           <h1 className="mt-2 text-2xl font-bold tracking-tight text-fg">Guardião Élyx</h1>
           <p className="text-sm text-muted">Hub de marca e produtos</p>
         </div>

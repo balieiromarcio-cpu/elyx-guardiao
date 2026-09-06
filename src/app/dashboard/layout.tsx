@@ -24,9 +24,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* Sidebar (desktop) */}
       <aside className="sticky top-0 hidden h-screen flex-col border-r border-line bg-surface/60 backdrop-blur lg:flex">
         <Link href="/dashboard" className="flex items-center gap-3 px-5 pt-5 pb-4">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-accent font-bold text-black shadow-[0_6px_18px_-8px_rgba(214,179,112,.8)]">
-            GE
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mark.png" alt="Élyx" className="h-9 w-9 object-contain" />
           <div className="leading-tight">
             <p className="text-sm font-semibold">Guardião Élyx</p>
             <p className="text-[11px] text-muted">Marca · produtos · fatos</p>
@@ -52,7 +51,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <header className="sticky top-0 z-40 border-b border-line bg-bg/85 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between px-4 py-3">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent text-xs font-bold text-black">GE</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo-mark.png" alt="Élyx" className="h-8 w-8 object-contain" />
               <span className="text-sm font-semibold">Guardião Élyx</span>
             </Link>
             <div className="flex items-center gap-2">

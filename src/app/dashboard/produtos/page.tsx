@@ -8,7 +8,9 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Pro
   const { todos } = await searchParams;
   const showAll = todos === "1";
 
-  const [products, ignoredCount] = await Promise.all([
+  const STATUS_ORDER = { ATIVO: 0, RASCUNHO: 1, DESCONTINUADO: 2 } as const;
+
+  const [rawProducts, ignoredCount] = await Promise.all([
     prisma.product.findMany({
       where: showAll ? {} : { ignored: false },
       orderBy: { name: "asc" },
@@ -16,6 +18,8 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Pro
     }),
     prisma.product.count({ where: { ignored: true } }),
   ]);
+  // Ativos primeiro — status do enum não ordena do jeito que a gente quer na tela.
+  const products = [...rawProducts].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
 
   return (
     <div className="space-y-6">
