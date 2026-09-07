@@ -108,7 +108,7 @@ export default async function MarcaPage({ searchParams }: { searchParams: Promis
           <Field label="Fonte de título" hint={fontFileNames.length ? `arquivos carregados: ${fontFileNames.join(", ")}` : "nenhum arquivo de fonte carregado ainda — o Sidney avisa e usa fonte provisória"}>
             <input name="fontDisplay" defaultValue={brand.fontDisplay ?? ""} placeholder="ex.: TAN Aegean" className="input" />
           </Field>
-          <Field label="Fonte de texto"><input name="fontBody" defaultValue={brand.fontBody ?? ""} placeholder="ex.: Agrandir" className="input" /></Field>
+          <Field label="Fonte de texto" hint="Montserrat é fonte gratuita (OFL) — o Sidney já tem os arquivos embutidos, não precisa subir aqui"><input name="fontBody" defaultValue={brand.fontBody ?? ""} placeholder="ex.: Montserrat" className="input" /></Field>
         </div>
         <Field label="Regras de imagem — como é (e como não é) uma imagem Élyx" hint="luz, cenário, pessoa, produto, o que nunca aparece. Vai direto pro prompt da IA e pro revisor automático de imagem.">
           <textarea name="imageRules" defaultValue={brand.imageRules ?? ""} className="input min-h-[120px]" />
