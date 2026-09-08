@@ -18,8 +18,11 @@ export async function addBrandAsset(input: { type: string; blobUrl: string; labe
   return asset;
 }
 
+/** Imagem de referência (estilo/prints "post que gostei") só some com um admin — é a base do que a IA usa como referência visual. Os demais materiais (logo, guideline, fonte, foto, vídeo) qualquer um da equipe pode excluir. */
 export async function deleteBrandAsset(id: string) {
   const s = await auth();
-  if (!s || s.user.role !== "ADMIN") throw new Error("apenas administradores podem excluir material da marca");
+  if (!s) throw new Error("unauthorized");
+  const asset = await prisma.asset.findUnique({ where: { id } });
+  if (asset?.type === "reference" && s.user.role !== "ADMIN") throw new Error("apenas administradores podem excluir imagem de referência");
   await prisma.asset.delete({ where: { id } }).catch(() => null);
 }

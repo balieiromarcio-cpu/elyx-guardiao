@@ -96,6 +96,31 @@ model Brand {
   updatedBy    String?
 }
 
+/// Proposta de mudança no Guia da marca feita pela equipe — não afeta nada até um admin
+/// aprovar (aplica em Brand, registra no ChangeLog, avisa 007/Sidney). Mesmos campos do
+/// Brand editáveis pela tela; singleton (só existe uma proposta pendente por vez).
+model BrandDraft {
+  id              String   @id @default("default")
+  purpose         String?
+  persona         String?
+  voiceRules      String?
+  monicaRules     String?
+  ctaRules        String?
+  allowedVocab    String[] @default([])
+  bannedTerms     String[] @default([])
+  disclaimers     String?
+  colorPrimary    String?
+  colorSecondary  String?
+  colorBackground String?
+  colorAccent     String?
+  colorText       String?
+  fontDisplay     String?
+  fontBody        String?
+  imageRules      String?
+  proposedBy      String?
+  proposedAt      DateTime @default(now())
+}
+
 /// Um dos 10 produtos Élyx. Os FATOS vivem em ProductVersion — este registro é só a
 /// identidade (slug, nome, vínculo com a Shopify) e o status comercial.
 model Product {
@@ -179,6 +204,11 @@ model Claim {
   note        String?
   createdBy   String?
   createdAt   DateTime   @default(now())
+  /// false = proposto pela equipe, aguardando um admin aprovar (não conta em compliance
+  /// ainda). Claim criado por admin já nasce true (mesmo padrão do Faq.approved).
+  approved      Boolean @default(true)
+  /// true = equipe pediu pra excluir; continua valendo até um admin confirmar a exclusão.
+  pendingDelete Boolean @default(false)
 
   @@index([productId])
   @@index([scope, type])

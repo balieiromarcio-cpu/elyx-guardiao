@@ -52,23 +52,54 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   async function addClaim(formData: FormData) {
     "use server";
     const s = await auth();
-    if (!s || s.user.role !== "ADMIN") redirect(`/dashboard/produtos/${slug}`);
+    if (!s) redirect("/login");
     const text = String(formData.get("text") ?? "").trim();
     const type = formData.get("type") === "FORBIDDEN" ? "FORBIDDEN" : "ALLOWED";
     if (!text) redirect(`/dashboard/produtos/${slug}`);
-    await prisma.claim.create({ data: { scope: "PRODUCT", productId: product!.id, type, text, createdBy: s.user.name ?? s.user.email } });
-    await logChange({ entity: "Claim", entityId: product!.id, field: type === "FORBIDDEN" ? "proibido" : "pode dizer", oldValue: null, newValue: text, origin: "MANUAL", changedBy: s.user.name ?? s.user.email });
+    const isAdmin = s.user.role === "ADMIN";
+    await prisma.claim.create({ data: { scope: "PRODUCT", productId: product!.id, type, text, approved: isAdmin, createdBy: s.user.name ?? s.user.email } });
+    if (isAdmin) {
+      await logChange({ entity: "Claim", entityId: product!.id, field: type === "FORBIDDEN" ? "proibido" : "pode dizer", oldValue: null, newValue: text, origin: "MANUAL", changedBy: s.user.name ?? s.user.email });
+    } else {
+      await prisma.reviewTask.create({ data: { description: `${s.user.name ?? s.user.email} propôs um claim novo em ${product!.name} (${type === "FORBIDDEN" ? "proibido" : "pode dizer"}): "${text}" — aguarda aprovação.`, productId: product!.id, systemsAffected: ["Guardião"] } });
+    }
     redirect(`/dashboard/produtos/${slug}`);
   }
 
+  /** Equipe pede exclusão (fica pendente); admin exclui de fato na hora. */
   async function deleteClaim(formData: FormData) {
+    "use server";
+    const s = await auth();
+    if (!s) redirect("/login");
+    const id = String(formData.get("id"));
+    if (s.user.role === "ADMIN") {
+      const claim = await prisma.claim.findUnique({ where: { id } });
+      await prisma.claim.delete({ where: { id } }).catch(() => null);
+      if (claim) await logChange({ entity: "Claim", entityId: product!.id, field: claim.type === "FORBIDDEN" ? "proibido (removido)" : "pode dizer (removido)", oldValue: claim.text, newValue: null, origin: "MANUAL", changedBy: s.user.name ?? s.user.email });
+    } else {
+      const claim = await prisma.claim.update({ where: { id }, data: { pendingDelete: true } }).catch(() => null);
+      if (claim) await prisma.reviewTask.create({ data: { description: `${s.user.name ?? s.user.email} pediu pra excluir o claim "${claim.text}" em ${product!.name} — aguarda confirmação.`, productId: product!.id, systemsAffected: ["Guardião"] } });
+    }
+    redirect(`/dashboard/produtos/${slug}`);
+  }
+
+  /** Admin aprova um claim proposto pela equipe (entra em vigor, passa a valer em compliance). */
+  async function approveClaim(formData: FormData) {
     "use server";
     const s = await auth();
     if (!s || s.user.role !== "ADMIN") redirect(`/dashboard/produtos/${slug}`);
     const id = String(formData.get("id"));
-    const claim = await prisma.claim.findUnique({ where: { id } });
-    await prisma.claim.delete({ where: { id } }).catch(() => null);
-    if (claim) await logChange({ entity: "Claim", entityId: product!.id, field: claim.type === "FORBIDDEN" ? "proibido (removido)" : "pode dizer (removido)", oldValue: claim.text, newValue: null, origin: "MANUAL", changedBy: s.user.name ?? s.user.email });
+    const claim = await prisma.claim.update({ where: { id }, data: { approved: true } });
+    await logChange({ entity: "Claim", entityId: product!.id, field: claim.type === "FORBIDDEN" ? "proibido (aprovado)" : "pode dizer (aprovado)", oldValue: null, newValue: claim.text, origin: "MANUAL", changedBy: s.user.name ?? s.user.email });
+    redirect(`/dashboard/produtos/${slug}`);
+  }
+
+  /** Admin mantém um claim que a equipe pediu pra excluir (cancela o pedido, sem apagar). */
+  async function keepClaim(formData: FormData) {
+    "use server";
+    const s = await auth();
+    if (!s || s.user.role !== "ADMIN") redirect(`/dashboard/produtos/${slug}`);
+    await prisma.claim.update({ where: { id: String(formData.get("id")) }, data: { pendingDelete: false } }).catch(() => null);
     redirect(`/dashboard/produtos/${slug}`);
   }
 
@@ -103,7 +134,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   async function deleteProductAsset(id: string) {
     "use server";
     const s = await auth();
-    if (!s || s.user.role !== "ADMIN") throw new Error("apenas administradores podem excluir foto");
+    if (!s) throw new Error("unauthorized");
     await prisma.asset.delete({ where: { id } }).catch(() => null);
   }
 
@@ -166,7 +197,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           assets={product.assets.map((a) => ({ id: a.id, type: a.type, blobUrl: a.blobUrl, label: a.label, createdAt: a.createdAt.toISOString() }))}
           onAdd={addProductAsset}
           onDelete={deleteProductAsset}
-          canDelete={isAdmin}
         />
       </section>
 
@@ -250,18 +280,15 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       {/* Claims */}
       <section className="card p-4">
         <h2 className="mb-2 text-sm font-semibold">O que pode e o que não pode dizer</h2>
-        {isAdmin ? (
-          <form action={addClaim} className="mb-3 flex flex-wrap items-end gap-2">
-            <select name="type" className="select w-40" defaultValue="ALLOWED">
-              <option value="ALLOWED">Pode dizer</option>
-              <option value="FORBIDDEN">Proibido</option>
-            </select>
-            <input name="text" placeholder="frase ou termo" className="input flex-1 min-w-[220px]" required />
-            <button type="submit" className="btn btn-secondary btn-sm">adicionar</button>
-          </form>
-        ) : (
-          <p className="mb-3 text-xs text-muted">Só administradores editam o que pode/não pode dizer — é a mesma lista que barra a compliance no 007 e no Sidney.</p>
-        )}
+        <p className="mb-3 text-xs text-muted">{isAdmin ? "É a mesma lista que barra a compliance no 007 e no Sidney." : "Sua proposta fica pendente até um administrador aprovar — não vale em compliance até lá."}</p>
+        <form action={addClaim} className="mb-3 flex flex-wrap items-end gap-2">
+          <select name="type" className="select w-40" defaultValue="ALLOWED">
+            <option value="ALLOWED">Pode dizer</option>
+            <option value="FORBIDDEN">Proibido</option>
+          </select>
+          <input name="text" placeholder="frase ou termo" className="input flex-1 min-w-[220px]" required />
+          <button type="submit" className="btn btn-secondary btn-sm">{isAdmin ? "adicionar" : "propor"}</button>
+        </form>
         <div className="space-y-1">
           {product.claims.length === 0 && <p className="text-xs text-muted">Nenhum claim cadastrado ainda.</p>}
           {product.claims.map((c) => (
@@ -269,8 +296,16 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               <span className={`badge ${c.type === "ALLOWED" ? "badge-ok" : "badge-danger"}`}>{c.type === "ALLOWED" ? "pode" : "proibido"}</span>
               <span className="flex-1">{c.text}</span>
               {c.note && <span className="text-xs text-muted">{c.note}</span>}
-              {isAdmin && (
-                <form action={deleteClaim}><input type="hidden" name="id" value={c.id} /><button type="submit" className="btn btn-ghost btn-xs px-1"><IconTrash size={12} /></button></form>
+              {!c.approved && <span className="badge badge-warn">aguarda aprovação</span>}
+              {c.approved && c.pendingDelete && <span className="badge badge-warn">exclusão pedida</span>}
+              {isAdmin && !c.approved && (
+                <form action={approveClaim}><input type="hidden" name="id" value={c.id} /><button type="submit" className="btn btn-secondary btn-xs">aprovar</button></form>
+              )}
+              {isAdmin && c.approved && c.pendingDelete && (
+                <form action={keepClaim}><input type="hidden" name="id" value={c.id} /><button type="submit" className="btn btn-secondary btn-xs">manter</button></form>
+              )}
+              {(isAdmin || !c.pendingDelete) && (
+                <form action={deleteClaim}><input type="hidden" name="id" value={c.id} /><button type="submit" className="btn btn-ghost btn-xs px-1" title={isAdmin ? "excluir" : "pedir exclusão"}><IconTrash size={12} /></button></form>
               )}
             </div>
           ))}

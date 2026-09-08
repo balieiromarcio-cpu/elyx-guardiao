@@ -16,7 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
     where: { slug },
     include: {
       shopifyMirror: true,
-      claims: true,
+      claims: { where: { approved: true } },
       faqs: { where: { approved: true } },
       assets: { where: { type: "photo" }, orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }] },
     },

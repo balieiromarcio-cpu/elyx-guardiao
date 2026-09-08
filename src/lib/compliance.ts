@@ -33,7 +33,7 @@ export async function checkCompliance(text: string | null | undefined, productSl
 
   const product = productSlug ? await prisma.product.findUnique({ where: { slug: productSlug } }) : null;
   const claims = await prisma.claim.findMany({
-    where: { type: "FORBIDDEN", OR: [{ scope: "GLOBAL" }, ...(product ? [{ scope: "PRODUCT" as const, productId: product.id }] : [])] },
+    where: { type: "FORBIDDEN", approved: true, OR: [{ scope: "GLOBAL" }, ...(product ? [{ scope: "PRODUCT" as const, productId: product.id }] : [])] },
   });
   for (const c of claims) if (c.text.trim() && termRegex(c.text).test(text)) flags.add(`${product ? `não existe no ${product.name}` : "não permitido"}: ${c.text.trim()}`);
 
@@ -44,7 +44,7 @@ export async function checkCompliance(text: string | null | undefined, productSl
 export async function productContextBlock(slug: string): Promise<string | null> {
   const product = await prisma.product.findUnique({
     where: { slug },
-    include: { shopifyMirror: true, claims: true, faqs: { where: { approved: true } } },
+    include: { shopifyMirror: true, claims: { where: { approved: true } }, faqs: { where: { approved: true } } },
   });
   if (!product) return null;
   const version = await getActiveVersion(product.id);
