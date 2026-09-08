@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function MarcaPage({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
   const session = await auth();
   if (!session) redirect("/login");
+  const isAdmin = session.user.role === "ADMIN";
   const [brand, assets, evidences] = await Promise.all([
     getBrand(),
     prisma.asset.findMany({ where: { productId: null }, orderBy: { createdAt: "desc" } }),
@@ -44,7 +45,7 @@ export default async function MarcaPage({ searchParams }: { searchParams: Promis
   async function save(formData: FormData) {
     "use server";
     const s = await auth();
-    if (!s) redirect("/login");
+    if (!s || s.user.role !== "ADMIN") redirect("/dashboard/marca");
     const fields = ["purpose", "persona", "voiceRules", "monicaRules", "ctaRules", "disclaimers", "colorPrimary", "colorSecondary", "colorBackground", "colorAccent", "colorText", "fontDisplay", "fontBody", "imageRules"] as const;
     const listFields = ["allowedVocab", "bannedTerms"] as const;
     const current = await getBrand();
@@ -80,6 +81,8 @@ export default async function MarcaPage({ searchParams }: { searchParams: Promis
       {ok && <p className="rounded-md bg-ok/15 px-3 py-2 text-sm text-ok">Guia salvo. Sistemas assinantes foram avisados.</p>}
 
       <form action={save} className="card space-y-4 p-4">
+        <fieldset disabled={!isAdmin} className="space-y-4">
+        {!isAdmin && <p className="text-xs text-muted">Só administradores editam o guia da marca — quem lê isto ao vivo é o 007, o Sidney e qualquer agente futuro.</p>}
         <Field label="Propósito e posicionamento"><textarea name="purpose" defaultValue={brand.purpose ?? ""} className="input min-h-[70px]" /></Field>
         <Field label="Persona — pra quem a marca fala"><textarea name="persona" defaultValue={brand.persona ?? ""} className="input min-h-[70px]" /></Field>
         <Field label="Tom de voz (com exemplos certo/errado)"><textarea name="voiceRules" defaultValue={brand.voiceRules ?? ""} className="input min-h-[100px]" /></Field>
@@ -114,6 +117,7 @@ export default async function MarcaPage({ searchParams }: { searchParams: Promis
           <textarea name="imageRules" defaultValue={brand.imageRules ?? ""} className="input min-h-[120px]" />
         </Field>
         <button type="submit" className="btn btn-primary btn-sm">Salvar guia</button>
+        </fieldset>
       </form>
 
       <section className="card space-y-3 p-4">
@@ -125,6 +129,7 @@ export default async function MarcaPage({ searchParams }: { searchParams: Promis
           assets={assets.map((a) => ({ id: a.id, type: a.type, blobUrl: a.blobUrl, label: a.label, createdAt: a.createdAt.toISOString() }))}
           onAdd={addBrandAsset}
           onDelete={deleteBrandAsset}
+          canDelete={isAdmin}
         />
       </section>
 

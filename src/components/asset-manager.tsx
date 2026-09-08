@@ -25,10 +25,13 @@ export function AssetManager({
   assets,
   onAdd,
   onDelete,
+  canDelete = true,
 }: {
   assets: AssetItem[];
   onAdd: (input: { type: string; blobUrl: string; label: string | null }) => Promise<unknown>;
   onDelete: (id: string) => Promise<void>;
+  /** Some deletes are admin-only (o rótulo/logo oficial não some com um clique de qualquer um). */
+  canDelete?: boolean;
 }) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
@@ -104,7 +107,9 @@ export function AssetManager({
               <div className="flex items-center gap-2 p-2 text-xs">
                 <span className="badge badge-muted">{TYPES.find((t) => t.value === a.type)?.label ?? a.type}</span>
                 <span className="flex-1 truncate">{a.label ?? "—"}</span>
-                <button type="button" onClick={() => remove(a.id)} className="btn btn-ghost btn-xs px-1 text-danger"><IconTrash size={12} /></button>
+                {canDelete && (
+                  <button type="button" onClick={() => remove(a.id)} className="btn btn-ghost btn-xs px-1 text-danger"><IconTrash size={12} /></button>
+                )}
               </div>
             </div>
           ))}

@@ -20,6 +20,6 @@ export async function addBrandAsset(input: { type: string; blobUrl: string; labe
 
 export async function deleteBrandAsset(id: string) {
   const s = await auth();
-  if (!s) throw new Error("unauthorized");
+  if (!s || s.user.role !== "ADMIN") throw new Error("apenas administradores podem excluir material da marca");
   await prisma.asset.delete({ where: { id } }).catch(() => null);
 }

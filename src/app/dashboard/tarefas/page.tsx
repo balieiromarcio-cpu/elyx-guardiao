@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function TarefasPage() {
   const session = await auth();
   if (!session) redirect("/login");
+  const isAdmin = session.user.role === "ADMIN";
   const [pendentes, concluidas] = await Promise.all([
     prisma.reviewTask.findMany({ where: { status: "PENDENTE" }, orderBy: { createdAt: "desc" }, include: { product: true } }),
     prisma.reviewTask.findMany({ where: { status: "CONCLUIDA" }, orderBy: { resolvedAt: "desc" }, take: 30, include: { product: true } }),
@@ -17,7 +18,7 @@ export default async function TarefasPage() {
   async function resolve(formData: FormData) {
     "use server";
     const s = await auth();
-    if (!s) redirect("/login");
+    if (!s || s.user.role !== "ADMIN") redirect("/dashboard/tarefas");
     await prisma.reviewTask.update({ where: { id: String(formData.get("id")) }, data: { status: "CONCLUIDA", resolvedAt: new Date(), resolvedBy: s.user.name ?? s.user.email } });
     redirect("/dashboard/tarefas");
   }
@@ -47,7 +48,9 @@ export default async function TarefasPage() {
                   {t.product && <Link href={`/dashboard/produtos/${t.product.slug}`} className="mt-1 inline-block text-xs text-accent hover:underline">abrir ficha do produto</Link>}
                   <p className="mt-1 text-[11px] text-muted">aberta em {t.createdAt.toLocaleString("pt-BR")}</p>
                 </div>
-                <form action={resolve}><input type="hidden" name="id" value={t.id} /><button type="submit" className="btn btn-secondary btn-xs"><IconCheck size={12} /> concluída</button></form>
+                {isAdmin && (
+                  <form action={resolve}><input type="hidden" name="id" value={t.id} /><button type="submit" className="btn btn-secondary btn-xs"><IconCheck size={12} /> concluída</button></form>
+                )}
               </div>
             ))}
           </div>

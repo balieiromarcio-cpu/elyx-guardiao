@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { approveVersion } from "@/lib/versioning";
+import { approveVersion, logChange } from "@/lib/versioning";
 import { VersionEditor } from "@/components/version-editor";
 import { AssetManager } from "@/components/asset-manager";
 import { IconExternal, IconCheck, IconAlert, IconTrash } from "@/components/icons";
@@ -52,19 +52,23 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   async function addClaim(formData: FormData) {
     "use server";
     const s = await auth();
-    if (!s) redirect("/login");
+    if (!s || s.user.role !== "ADMIN") redirect(`/dashboard/produtos/${slug}`);
     const text = String(formData.get("text") ?? "").trim();
     const type = formData.get("type") === "FORBIDDEN" ? "FORBIDDEN" : "ALLOWED";
     if (!text) redirect(`/dashboard/produtos/${slug}`);
     await prisma.claim.create({ data: { scope: "PRODUCT", productId: product!.id, type, text, createdBy: s.user.name ?? s.user.email } });
+    await logChange({ entity: "Claim", entityId: product!.id, field: type === "FORBIDDEN" ? "proibido" : "pode dizer", oldValue: null, newValue: text, origin: "MANUAL", changedBy: s.user.name ?? s.user.email });
     redirect(`/dashboard/produtos/${slug}`);
   }
 
   async function deleteClaim(formData: FormData) {
     "use server";
     const s = await auth();
-    if (!s) redirect("/login");
-    await prisma.claim.delete({ where: { id: String(formData.get("id")) } }).catch(() => null);
+    if (!s || s.user.role !== "ADMIN") redirect(`/dashboard/produtos/${slug}`);
+    const id = String(formData.get("id"));
+    const claim = await prisma.claim.findUnique({ where: { id } });
+    await prisma.claim.delete({ where: { id } }).catch(() => null);
+    if (claim) await logChange({ entity: "Claim", entityId: product!.id, field: claim.type === "FORBIDDEN" ? "proibido (removido)" : "pode dizer (removido)", oldValue: claim.text, newValue: null, origin: "MANUAL", changedBy: s.user.name ?? s.user.email });
     redirect(`/dashboard/produtos/${slug}`);
   }
 
@@ -99,7 +103,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   async function deleteProductAsset(id: string) {
     "use server";
     const s = await auth();
-    if (!s) throw new Error("unauthorized");
+    if (!s || s.user.role !== "ADMIN") throw new Error("apenas administradores podem excluir foto");
     await prisma.asset.delete({ where: { id } }).catch(() => null);
   }
 
@@ -162,6 +166,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           assets={product.assets.map((a) => ({ id: a.id, type: a.type, blobUrl: a.blobUrl, label: a.label, createdAt: a.createdAt.toISOString() }))}
           onAdd={addProductAsset}
           onDelete={deleteProductAsset}
+          canDelete={isAdmin}
         />
       </section>
 
@@ -245,14 +250,18 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       {/* Claims */}
       <section className="card p-4">
         <h2 className="mb-2 text-sm font-semibold">O que pode e o que não pode dizer</h2>
-        <form action={addClaim} className="mb-3 flex flex-wrap items-end gap-2">
-          <select name="type" className="select w-40" defaultValue="ALLOWED">
-            <option value="ALLOWED">Pode dizer</option>
-            <option value="FORBIDDEN">Proibido</option>
-          </select>
-          <input name="text" placeholder="frase ou termo" className="input flex-1 min-w-[220px]" required />
-          <button type="submit" className="btn btn-secondary btn-sm">adicionar</button>
-        </form>
+        {isAdmin ? (
+          <form action={addClaim} className="mb-3 flex flex-wrap items-end gap-2">
+            <select name="type" className="select w-40" defaultValue="ALLOWED">
+              <option value="ALLOWED">Pode dizer</option>
+              <option value="FORBIDDEN">Proibido</option>
+            </select>
+            <input name="text" placeholder="frase ou termo" className="input flex-1 min-w-[220px]" required />
+            <button type="submit" className="btn btn-secondary btn-sm">adicionar</button>
+          </form>
+        ) : (
+          <p className="mb-3 text-xs text-muted">Só administradores editam o que pode/não pode dizer — é a mesma lista que barra a compliance no 007 e no Sidney.</p>
+        )}
         <div className="space-y-1">
           {product.claims.length === 0 && <p className="text-xs text-muted">Nenhum claim cadastrado ainda.</p>}
           {product.claims.map((c) => (
@@ -260,7 +269,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               <span className={`badge ${c.type === "ALLOWED" ? "badge-ok" : "badge-danger"}`}>{c.type === "ALLOWED" ? "pode" : "proibido"}</span>
               <span className="flex-1">{c.text}</span>
               {c.note && <span className="text-xs text-muted">{c.note}</span>}
-              <form action={deleteClaim}><input type="hidden" name="id" value={c.id} /><button type="submit" className="btn btn-ghost btn-xs px-1"><IconTrash size={12} /></button></form>
+              {isAdmin && (
+                <form action={deleteClaim}><input type="hidden" name="id" value={c.id} /><button type="submit" className="btn btn-ghost btn-xs px-1"><IconTrash size={12} /></button></form>
+              )}
             </div>
           ))}
         </div>
