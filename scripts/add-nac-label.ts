@@ -59,7 +59,7 @@ async function main() {
   }
   console.log(`${forbidden.length} claims proibidos garantidos`);
 
-  await prisma.changeLog.create({ data: { origin: "MANUAL", entity: "Product", entityId: product.id, summary: "NAC: ficha v1 criada a partir do rótulo físico (foto enviada pelo Marcio em 09/09/2026): NAC 600 mg de L-cisteína, selênio 68 mcg, molibdênio 45 mcg, 1 cápsula/dia, ≥ 19 anos, sem glúten.", actor: "Sidney" } }).catch((e) => console.warn("changelog não gravado:", e instanceof Error ? e.message : e));
+  await prisma.changeLog.create({ data: { origin: "MANUAL", entity: "Product", entityId: product.id, field: "ficha", oldValue: null, newValue: "v1 VIGENTE a partir do rótulo físico (foto enviada pelo Marcio em 09/09/2026): NAC 600 mg de L-cisteína, selênio 68 mcg (113% VD), molibdênio 45 mcg (100% VD), 1 cápsula/dia, ≥ 19 anos, sem glúten.", changedBy: "Sidney", approvedBy: "Marcio (Admin)" } }).catch((e) => console.warn("changelog não gravado:", e instanceof Error ? e.message : e));
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(() => prisma.$disconnect());
