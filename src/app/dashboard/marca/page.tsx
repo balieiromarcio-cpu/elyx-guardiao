@@ -218,10 +218,9 @@ export default async function MarcaPage({ searchParams }: { searchParams: Promis
           <p className="text-xs text-muted">Logo, manual de marca, fontes, prints de posts/anúncios que você gostou pra usar de referência. Fica salvo aqui, não some do computador de ninguém.</p>
         </div>
         <AssetManager
-          assets={assets.map((a) => ({ id: a.id, type: a.type, blobUrl: a.blobUrl, label: a.label, createdAt: a.createdAt.toISOString() }))}
+          assets={assets.map((a) => ({ id: a.id, type: a.type, blobUrl: a.blobUrl, label: a.label, createdAt: a.createdAt.toISOString(), canDelete: isAdmin || a.type !== "reference" }))}
           onAdd={addBrandAsset}
           onDelete={deleteBrandAsset}
-          canDelete={(a) => isAdmin || a.type !== "reference"}
         />
       </section>
 

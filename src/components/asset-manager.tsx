@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { IconUpload, IconTrash, IconExternal } from "@/components/icons";
 
-export type AssetItem = { id: string; type: string; blobUrl: string; label: string | null; createdAt: string };
+export type AssetItem = { id: string; type: string; blobUrl: string; label: string | null; createdAt: string; canDelete?: boolean };
 
 const TYPES = [
   { value: "logo", label: "Logo" },
@@ -25,15 +25,13 @@ export function AssetManager({
   assets,
   onAdd,
   onDelete,
-  canDelete = true,
 }: {
   assets: AssetItem[];
   onAdd: (input: { type: string; blobUrl: string; label: string | null }) => Promise<unknown>;
   onDelete: (id: string) => Promise<void>;
-  /** Alguns tipos são admin-only (ex.: imagem de referência não some com um clique de qualquer um). */
-  canDelete?: boolean | ((asset: AssetItem) => boolean);
 }) {
-  const canDeleteAsset = (a: AssetItem) => (typeof canDelete === "function" ? canDelete(a) : canDelete);
+  /** Alguns tipos são admin-only (ex.: imagem de referência não some com um clique de qualquer um) — decidido no servidor, por item, em `asset.canDelete`. */
+  const canDeleteAsset = (a: AssetItem) => a.canDelete ?? true;
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [type, setType] = useState("reference");
